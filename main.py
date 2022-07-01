@@ -123,5 +123,5 @@ for row in tqdm.tqdm(df.itertuples()):
                    row[8],
                    )
 conn.commit()
-
+print('кукуку')
 
