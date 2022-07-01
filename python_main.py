@@ -7,8 +7,8 @@ import pyodbc
 import tqdm
 import time
 
-xlsx_file = "C:\\bigdata\\original\\bigdata2-100.xlsx"
-work_folder = "C:\\bigdata\\original"
+original = "C:\\bigdata\\original\\"
+work_folder = "C:\\bigdata\\"
 months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 years = [2017, 2018, 2019, 2020, 2021]
 
@@ -22,6 +22,9 @@ def connect():
     return conn
 
 
+def topyear(cursor):
+    cursor.execute('SELECT top(1)SUM(quantity_sold*(retail_price-purchase_price)) AS "sumn" FROM dbo.data20220410131718'
+                   ' where year = ^20*; ')
 
 
 def drop_table(table_name, cursor):
@@ -38,19 +41,20 @@ def clear_folder(path):
 
 
 def get_csv(xlsx_file, folder):
+
     date = datetime.datetime.now()
-    csv_name = date.strftime("%Y%m%d%H%M%S")
+    csv_name_i = date.strftime("%Y%m%d%H%M%S")
     print("открываю xlsx")
-    data_xls = pd.read_excel(xlsx_file, sheet_name='GroceryMar Pyat chips energ 10-')
+    data_xls = pd.read_excel(xlsx_file, "GroceryMar Pyat chips energ 10-")
     print("xlsx в csv")
-    data_xls.to_csv(f'{folder}{csv_name}.csv', encoding='utf-8', index=False, header = False)
-    return csv_name
+    for i in tqdm.tqdm(range(20000567)):
+        time.sleep(0.000000000001)
+    data_xls.to_csv(f'{folder}{csv_name_i}.csv', encoding='utf-8', index=False)
+    return csv_name_i
 
 
 def csv_from_excel(folder, csv_name):
     print("шлифую csv")
-    products_sums_list = {'':''}
-    products_sums_list_help = {'':''}
     date = datetime.datetime.now()
     datestr = date.strftime("%Y%m%d%H%M%S")
     with open(f'{folder}{csv_name}.csv', encoding='utf-8') as csvf:
@@ -69,20 +73,20 @@ def csv_from_excel(folder, csv_name):
             if row[7] == '':
                 row[7] = float(row[6]) * 1.35
             csv_writer.writerow(row)
-        for row in tqdm.tqdm(data.splitlines()):
-            row = list(row.split(','))
-            for product in products_sums_list_help.keys():
-                if row[3] != product:
-                    products_sums_list.update({row[3]:(float(row[7])-float(row[6]))*int(row[5])})
-            products_sums_list_help = products_sums_list.copy()
-        print(products_sums_list)
+    copyfile(f"{folder}{datestr}v.csv")
     return f"{folder}{datestr}v.csv"
 
 
+def copyfile(csv_name):
+    with open(csv_name, mode="w", encoding='utf-8') as w_file:
+        csv_writer = csv.writer(w_file, delimiter=",", lineterminator="\r")
+        for row in tqdm.tqdm(data.splitlines()):
+            csv_writer.writerow(row)
+
 date = datetime.datetime.now()
 datestr = date.strftime("%Y%m%d%H%M%S")
-#clear_folder("C:\\bigdata")
-csv_name = get_csv(xlsx_file, work_folder)
+clear_folder("C:\\bigdata")
+csv_name = get_csv("C:\\bigdata\\original\\bigdata2.xlsx", work_folder)
 csv_namev = csv_from_excel(work_folder, csv_name)
 print("подключаюсь к sql")
 db_name = f"data{datestr}"
@@ -105,7 +109,7 @@ cursor.execute(f'''
 			)                     
             ''')
 conn.commit()
-data = pd.read_csv(csv_namev, on_bad_lines='skip')
+data = pd.read_csv(csv_namev, on_bad_lines='skip') #понять, мешает или нет
 df = pd.DataFrame(data)
 for row in tqdm.tqdm(df.itertuples()):
     cursor.execute(f'''
@@ -125,3 +129,5 @@ for row in tqdm.tqdm(df.itertuples()):
 conn.commit()
 
 
+
+print("всё")
