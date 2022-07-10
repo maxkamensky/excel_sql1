@@ -58,8 +58,15 @@ def csv_from_excel(folder, csv_name):
     with open(f"{folder}{datestr}v.csv", mode="w", encoding='utf-8') as w_file:
         csv_writer = csv.writer(w_file, delimiter=",", lineterminator="\r")
         for row in tqdm.tqdm(data.splitlines()):
-            row = row.replace('"', '')
+            row = row.replace('"', '').replace('\n', '')
             row = list(row.split(','))
+            print(row)
+            if row[2] == '3240461' and row[5] == '1':
+                continue
+            if row[2] == '3337159' and row[5] == '40':
+                continue
+            if len(row) < 8:
+                continue
             row[0] = choice(months)
             row[1] = choice(years)
             if row[5] == '':
@@ -71,13 +78,19 @@ def csv_from_excel(folder, csv_name):
             csv_writer.writerow(row)
         for row in tqdm.tqdm(data.splitlines()):
             row = list(row.split(','))
-            for product in products_sums_list_help.keys():
+            for product, price in products_sums_list_help.items():
                 if row[3] != product:
-                    products_sums_list.update({row[3]:(float(row[7])-float(row[6]))*int(row[5])})
+                    products_sums_list.update({row[3]:float(round((float(row[7])-float(row[6]))*int(row[5]), 2))})
+                if row[3] == product:
+                    products_sums_list.update({product: price + float(round((float(row[7]) - float(row[6])) * int(row[5]), 2))})
             products_sums_list_help = products_sums_list.copy()
-        print(products_sums_list)
-    return f"{folder}{datestr}v.csv"
-
+        sorted_dict = {}
+        sorted_keys = sorted(products_sums_list, key=products_sums_list.get)
+        for w in sorted_keys:
+            sorted_dict[w] = products_sums_list[w]
+        for key in products_sums_list:
+            print(key, '->', products_sums_list[key])
+    return f'{folder}{csv_name}.csv'
 
 date = datetime.datetime.now()
 datestr = date.strftime("%Y%m%d%H%M%S")
