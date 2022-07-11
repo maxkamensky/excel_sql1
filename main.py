@@ -75,9 +75,23 @@ def csv_from_excel(folder, csv_name):
                 row[6] = randint(100.0, 1000.0)
             if row[7] == '':
                 row[7] = float(row[6]) * 1.35
+            try:
+                float(row[7])
+            except:
+                print('тут ошибка ==================>', row[7])
+            try:
+                float(row[8])
+            except:
+                print('тут ошибка ==================>', row[8])
             csv_writer.writerow(row)
         for row in tqdm.tqdm(data.splitlines()):
             row = list(row.split(','))
+            for product, price in products_sums_list_help.items():
+                if row[3] != product:
+                    products_sums_list.update({row[3]:float(round((float(row[7])-float(row[6]))*int(row[5]), 2))})
+                if row[3] == product:
+                    products_sums_list.update({product: price + float(round((float(row[7]) - float(row[6])) * int(row[5]), 2))})
+            products_sums_list_help = products_sums_list.copy()
             for product, price in products_sums_list_help.items():
                 if row[3] != product:
                     products_sums_list.update({row[3]:float(round((float(row[7])-float(row[6]))*int(row[5]), 2))})
