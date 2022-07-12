@@ -2,13 +2,14 @@ import csv
 import datetime
 import os
 from random import choice, randint
+from operator import itemgetter
 import pandas as pd
 import pyodbc
 import tqdm
 import time
 
 xlsx_file = "C:\\bigdata\\original\\bigdata2-100.xlsx"
-work_folder = "C:\\bigdata\\original"
+work_folder = "C:\\bigdata\\csv_files\\"
 months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 years = [2017, 2018, 2019, 2020, 2021]
 
@@ -20,8 +21,6 @@ def connect():
                           'Trusted_Connection=yes;')
     conn.commit()
     return conn
-
-
 
 
 def drop_table(table_name, cursor):
@@ -37,117 +36,110 @@ def clear_folder(path):
             os.remove(os.path.join(root, name))
 
 
-def get_csv(xlsx_file, folder):
+def get_csv(xlsx_file, work_folder):
     date = datetime.datetime.now()
     csv_name = date.strftime("%Y%m%d%H%M%S")
     print("открываю xlsx")
     data_xls = pd.read_excel(xlsx_file, sheet_name='GroceryMar Pyat chips energ 10-')
     print("xlsx в csv")
-    data_xls.to_csv(f'{folder}{csv_name}.csv', encoding='utf-8', index=False, header = False)
+    data_xls.to_csv(f'{work_folder}{csv_name}.csv', encoding='utf-8', index=False, header = False)
     return csv_name
 
 
-def csv_from_excel(folder, csv_name):
+def csv_from_excel(work_folder, csv_name):
     print("шлифую csv")
-    products_sums_list = {'':''}
-    products_sums_list_help = {'':''}
-    date = datetime.datetime.now()
-    datestr = date.strftime("%Y%m%d%H%M%S")
-    with open(f'{folder}{csv_name}.csv', encoding='utf-8') as csvf:
+    products_sums_list = {tuple(['','']):''}
+    products_sums_list_help = {tuple(['','']):''}
+    with open(f'{work_folder}{csv_name}.csv', encoding='utf-8') as csvf:
         data = str(csvf.read())
-    with open(f"{folder}{datestr}v.csv", mode="w", encoding='utf-8') as w_file:
+    with open(f"{work_folder}{csv_name}v.csv", mode="w", encoding='utf-8') as w_file:
         csv_writer = csv.writer(w_file, delimiter=",", lineterminator="\r")
         for row in tqdm.tqdm(data.splitlines()):
             row = row.replace('"', '').replace('\n', '')
             row = list(row.split(','))
-            print(row)
-            if row[2] == '3240461' and row[5] == '1':
-                continue
-            if row[2] == '3337159' and row[5] == '40':
-                continue
-            if len(row) < 8:
-                continue
-            row[0] = choice(months)
-            row[1] = choice(years)
+
             if row[5] == '':
                 row[5] = randint(50, 100)
             if row[6] == '':
                 row[6] = randint(100.0, 1000.0)
             if row[7] == '':
                 row[7] = float(row[6]) * 1.35
-            try:
-                float(row[7])
-            except:
-                print('тут ошибка ==================>', row[7])
-            try:
-                float(row[8])
-            except:
-                print('тут ошибка ==================>', row[8])
             csv_writer.writerow(row)
         for row in tqdm.tqdm(data.splitlines()):
             row = list(row.split(','))
+            row[0] = choice(months)
+            row[1] = choice(years)
             for product, price in products_sums_list_help.items():
                 if row[3] != product:
-                    products_sums_list.update({row[3]:float(round((float(row[7])-float(row[6]))*int(row[5]), 2))})
+                    products_sums_list.update({tuple([row[3], row[1]]):float(round((float(row[7])-float(row[6]))*int(row[5]), 2))})
                 if row[3] == product:
                     products_sums_list.update({product: price + float(round((float(row[7]) - float(row[6])) * int(row[5]), 2))})
             products_sums_list_help = products_sums_list.copy()
-            for product, price in products_sums_list_help.items():
-                if row[3] != product:
-                    products_sums_list.update({row[3]:float(round((float(row[7])-float(row[6]))*int(row[5]), 2))})
-                if row[3] == product:
-                    products_sums_list.update({product: price + float(round((float(row[7]) - float(row[6])) * int(row[5]), 2))})
-            products_sums_list_help = products_sums_list.copy()
-        sorted_dict = {}
-        sorted_keys = sorted(products_sums_list, key=products_sums_list.get)
-        for w in sorted_keys:
-            sorted_dict[w] = products_sums_list[w]
+        products_sums_list_new = {}
+        for key, value in products_sums_list.items():
+            if not isinstance(value, str):
+                products_sums_list_new[key] = value
+
+        products_sums_list = dict(sorted(products_sums_list_new.items(), key=itemgetter(1), reverse=True))
+        i = 1
+        print()
+        print('Топ за всё время: ')
         for key in products_sums_list:
-            print(key, '->', products_sums_list[key])
-    return f'{folder}{csv_name}.csv'
+            print(f'{i}.{key[0]} -> {products_sums_list[key]}')
+            i += 1
+            if i > 10:
+                break
+        i = 1
+        print()
+        print('======================================')
+        print('Топ за 2017-ый год: ')
+        for k,v in products_sums_list.items():
+            if k[1] == 2017:
+                print(f'    {i}.{k[0]} -> {v}')
+                i += 1
+                if i > 10:
+                    break
+        i = 1
+        print()
+        print('Топ за 2018-ый год: ')
+        for k,v in products_sums_list.items():
+            if k[1] == 2018:
+                print(f'    {i}.{k[0]} -> {v}')
+                i += 1
+                if i > 10:
+                    break
+        i = 1
+        print()
+        print('Топ за 2019-ый год: ')
+        for k,v in products_sums_list.items():
+            if k[1] == 2019:
+                print(f'    {i}.{k[0]} -> {v}')
+                i += 1
+                if i > 10:
+                    break
+        i = 1
+        print()
+        print('Топ за 2020-ый год: ')
+        for k, v in products_sums_list.items():
+            if k[1] == 2020:
+                print(f'    {i}.{k[0]} -> {v}')
+                i += 1
+                if i > 10:
+                    break
+        i = 1
+        print()
+        print('Топ за 2021-ый год: ')
+        for k, v in products_sums_list.items():
+            if k[1] == 2021:
+                print(f'    {i}.{k[0]} -> {v}')
+                i += 1
+                if i > 10:
+                    break
+
+    return f'{work_folder}{csv_name}.csv'
 
 date = datetime.datetime.now()
 datestr = date.strftime("%Y%m%d%H%M%S")
-#clear_folder("C:\\bigdata")
+clear_folder(work_folder)
 csv_name = get_csv(xlsx_file, work_folder)
 csv_namev = csv_from_excel(work_folder, csv_name)
-print("подключаюсь к sql")
-db_name = f"data{datestr}"
-conn = pyodbc.connect('Driver={SQL Server};'
-                      'Server=ASUSALEX\SQLEXPRESS;'
-                      'Database=python_sql;'
-                      'Trusted_Connection=yes;')
-print("подключился")
-cursor = conn.cursor()
-cursor.execute(f'''
-		CREATE TABLE {db_name} (
-			month int,
-			year int,
-			id int,
-			product_name nvarchar(200),
-			supplier_name nvarchar(200),
-			quantity_sold int,
-			purchase_price float, 
-			retail_price float
-			)                     
-            ''')
-conn.commit()
-data = pd.read_csv(csv_namev, on_bad_lines='skip')
-df = pd.DataFrame(data)
-for row in tqdm.tqdm(df.itertuples()):
-    cursor.execute(f'''
-                INSERT INTO {db_name} (month, year, id, product_name, supplier_name,
-                                      quantity_sold, purchase_price, retail_price)
-                VALUES (?,?,?,?,?,?,?,?)
-                ''',
-                   row[1],
-                   row[2],
-                   row[3],
-                   row[4],
-                   row[5],
-                   row[6],
-                   row[7],
-                   row[8],
-                   )
-conn.commit()
-print('кукукукуку')
