@@ -1,3 +1,5 @@
+# Шурик молодца!!! Так держать!!!
+
 import csv
 import datetime
 import os
