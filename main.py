@@ -1,4 +1,3 @@
-#1
 import csv
 import datetime
 import os
@@ -144,5 +143,3 @@ datestr = date.strftime("%Y%m%d%H%M%S")
 clear_folder(work_folder)
 csv_name = get_csv(xlsx_file, work_folder)
 csv_namev = csv_from_excel(work_folder, csv_name)
-
-
